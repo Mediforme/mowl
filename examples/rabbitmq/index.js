@@ -9,7 +9,7 @@ const provider1 = new RabbitmqProvider({
 const service1 = mowl({serviceName: 'service1', provider: provider1});
 service1.use(bus());
 service1.use(route());
-service1.handle('answer', function(route, message) {});
+service1.handle('answer', () => {});
 
 const provider2 = new RabbitmqProvider({
   connectionString: 'amqp://guest:guest@127.0.0.1:5672/'
@@ -17,7 +17,7 @@ const provider2 = new RabbitmqProvider({
 const service2 = mowl({serviceName: 'service2', provider: provider2});
 service2.use(bus());
 service2.use(route());
-service2.handle('ask', function(route, message, context) {
+service2.handle('ask', (route, message, context) => {
   context.bus.push('answer', 'Great, thanks!');
 });
 

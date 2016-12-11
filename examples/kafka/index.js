@@ -12,7 +12,7 @@ const provider1 = new KafkaProvider({
 const service1 = mowl({serviceName: 'service1', provider: provider1});
 service1.use(bus());
 service1.use(route());
-service1.handle('answer', function(route, message) {});
+service1.handle('answer', () => {});
 
 const provider2 = new KafkaProvider({
   connectionString: '127.0.0.1:9092'
@@ -20,7 +20,7 @@ const provider2 = new KafkaProvider({
 const service2 = mowl({serviceName: 'service2', provider: provider2});
 service2.use(bus());
 service2.use(route());
-service2.handle('ask', function(route, message, context) {
+service2.handle('ask', (route, message, context) => {
   context.bus.push('answer', 'Great, thanks!');
 });
 
