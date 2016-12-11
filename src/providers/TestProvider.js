@@ -15,12 +15,14 @@ class TestProvider extends AbstractProvider {
   connect(mowl) {
     this.mowl = mowl;
     connections.push(this);
+    return Promise.resolve();
   }
 
   send(route, message) {
     connections.forEach((connection) => {
       connection.onReceive(serialize(route, message));
     });
+    return Promise.resolve();
   }
 
   onReceive(data) {
