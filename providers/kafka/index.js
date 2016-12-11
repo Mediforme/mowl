@@ -1,6 +1,14 @@
-const AbstractProvider = require('./AbstractProvider');
+const AbstractProvider = require('../../core/src/providers/AbstractProvider');
+const isString = require('../../core/src/helpers/isString');
+const logger = require('../../core/src/helpers/logger');
 const kafka = require('no-kafka');
-const logger = require('../helpers/logger');
+
+function validateConnectionString(connectionString) {
+  if (!connectionString || !isString(connectionString)) {
+    throw new Error('Mowl Kafka provider is initialized with an invalid `connectionString`, this should be a string.');
+  }
+  return connectionString;
+}
 
 function serialize(route, message) {
   return Buffer.from(JSON.stringify([route, message]), 'utf-8');
@@ -11,35 +19,27 @@ function deserialize(data) {
   return [route, message];
 }
 
-function convertRouteToTopic(route) {
-  // For simplicity, we treat topic and route as equivalents
-  return route;
-}
-
-function convertTopicToRoute(topic) {
-  // For simplicity, we treat topic and route as equivalents
-  return topic;
-}
-
 class KafkaProvider extends AbstractProvider {
   constructor({
-    connectionString = '127.0.0.1:9092'
+    connectionString
   } = {}) {
     super();
-    this.connectionString = connectionString;
+    this.connectionString = validateConnectionString(connectionString);
+
+    this.producer = null;
+    this.consumer = null;
   }
 
   connect(mowl) {
     this.mowl = mowl;
 
-    // Connect to Kafka as consumer
     return this.connectAsConsumer();
   }
 
   send(route, message) {
     return this.connectAsProducer().then(() => {
       return this.producer.send({
-        topic: convertRouteToTopic(route),
+        topic: route,
         message: {value: serialize(route, message)}
       }, {
         codec: kafka.COMPRESSION_GZIP
@@ -48,7 +48,7 @@ class KafkaProvider extends AbstractProvider {
   }
 
   onReceive(data) {
-    const [route, message] = data;
+    const [route, message] = deserialize(data);
     this.mowl.onReceive(route, message);
   }
 
@@ -76,14 +76,13 @@ class KafkaProvider extends AbstractProvider {
       groupId: `${this.mowl.serviceName}-group`,
       connectionString: this.connectionString
     });
-    const payloads = this.mowl.handlers.map(([route, handler]) => ({topic: convertRouteToTopic(route)}));
+    const payloads = this.mowl.handlers.map(([route, handler]) => ({topic: route}));
     return this.consumer.init([{
-      subscriptions: this.mowl.handlers.map(([route, handler]) => convertRouteToTopic(route)),
+      subscriptions: this.mowl.handlers.map(([route, handler]) => route),
       strategy: new kafka.DefaultAssignmentStrategy(),
       handler: (messages, topic, partition) => {
         messages.forEach(({message: {value: data}}) => {
-          const [route, message] = deserialize(data);
-          this.mowl.onReceive(route, message);
+          this.onReceive(data);
         });
       }
     }]);

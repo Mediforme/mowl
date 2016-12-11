@@ -74,7 +74,9 @@ class Mowl {
 
   // Proxies send to provider
   send(route, message) {
-    return this.provider.send(route, message).catch((error) => {
+    return this.provider.send(route, message).then(() => {
+      logger.info(`${this.serviceName}`, `Sent message to route \`${route}\` with content \`${JSON.stringify(message)}\`.`);
+    }).catch((error) => {
       logger.error(`${this.serviceName}`, `Could not send message to route \`${route}\` with content \`${JSON.stringify(message)}\`.`);
       logger.error(`${this.serviceName}`, error);
     });
@@ -113,7 +115,7 @@ class Mowl {
     }).catch((error) => {
       logger.error(`${this.serviceName}`, `An error has occurred while handling message with route \`${route}\` and content \`${JSON.stringify(message)}\`.`);
       logger.error(`${this.serviceName}`, error);
-      this.send('errors', {route, message, error});
+      this.send(this.errorsRoute, {route, message, error});
     });
   }
 }
